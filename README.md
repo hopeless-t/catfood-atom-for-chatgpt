@@ -4,7 +4,19 @@ A small local performance observer for ChatGPT Web.
 
 It helps answer a simple question: **when ChatGPT Web feels slow, where is the delay coming from?**
 
-CATFOOD Atom is currently an observer, not a speed-up extension. It does not change, cancel, replay, or replace ChatGPT requests.
+CATFOOD Atom is currently an observer, not a speed-up extension. It does not change, cancel, replay, replace, or bypass ChatGPT requests.
+
+## Supported desktop systems
+
+- Linux
+- macOS
+- Windows 10/11
+
+The browser extension is shared across all three systems. The installer only changes how the small local metrics service starts in the background:
+
+- Linux: `systemd --user`
+- macOS: LaunchAgent (`launchd`)
+- Windows: the current user's Startup folder
 
 ## What it can show
 
@@ -31,90 +43,156 @@ CATFOOD Atom does **not** store:
 - Raw URLs
 - Query strings
 
-The local service accepts metrics on loopback only (`127.0.0.1`).
+The local service listens on loopback only (`127.0.0.1:8766`).
 
 ## Requirements
 
-- Linux
-- A working `systemd --user` session
-- Python 3
-- `curl`
-- Google Chrome or Chromium with support for unpacked Manifest V3 extensions
+All systems need:
 
-You do not need Node.js, npm, Docker, or a cloud account.
+- Python 3
+- Git, if you install by cloning this repository
+- A Chromium-based desktop browser that supports unpacked Manifest V3 extensions, such as Chrome, Chromium, Edge, or Brave
+
+No Node.js, npm, Docker, or cloud account is required.
+
+Linux additionally needs a working `systemd --user` session.
 
 ## Install
 
 ### 1. Clone the repository
+
+Linux / macOS:
 
 ```bash
 git clone https://github.com/hopeless-t/catfood-atom-for-chatgpt.git
 cd catfood-atom-for-chatgpt
 ```
 
-### 2. Run the installer
+Windows PowerShell:
+
+```powershell
+git clone https://github.com/hopeless-t/catfood-atom-for-chatgpt.git
+cd catfood-atom-for-chatgpt
+```
+
+### 2. Install the local service
+
+#### Linux
+
+```bash
+python3 install.py
+```
+
+You can also use the wrapper:
 
 ```bash
 ./install.sh
 ```
 
-The installer:
+#### macOS
 
-1. Copies the local metrics service to `~/.local/lib/catfood-atom-for-chatgpt/`.
-2. Installs a user service at `~/.config/systemd/user/catfood-atom.service`.
-3. Starts or restarts the local service on `127.0.0.1:8766`.
-4. Prints the path of the Chrome extension directory.
+```bash
+python3 install.py
+```
+
+You can also use:
+
+```bash
+./install.sh
+```
+
+#### Windows
+
+```powershell
+py -3 .\install.py
+```
+
+If the Python launcher is unavailable:
+
+```powershell
+python .\install.py
+```
+
+The optional PowerShell wrapper is also available:
+
+```powershell
+.\install.ps1
+```
+
+The installer copies the service, status tool, and extension into a stable per-user application directory, configures background startup for the current OS, starts the local service, and prints the installed extension path.
 
 A successful install prints a health response similar to:
 
 ```json
-{"ok":true,"version":"0.1.1","pid":12345}
+{"ok":true,"version":"0.2.0","pid":12345}
 ```
 
-### 3. Load the Chrome extension
+### 3. Load the browser extension
 
-Open:
+Open the extension-management page in your Chromium-based browser. For Chrome and Chromium:
 
 ```text
 chrome://extensions
 ```
 
+For Edge:
+
+```text
+edge://extensions
+```
+
 Then:
 
 1. Enable **Developer mode**.
-2. Click **Load unpacked**.
-3. Select the `extension/` directory inside this repository.
+2. Choose **Load unpacked**.
+3. Select the `extension` directory printed by the installer.
 4. Confirm that **CATFOOD Atom for ChatGPT** appears and is enabled.
 5. Reload any already-open `chatgpt.com` tabs once.
 
-No Chrome Web Store installation is required.
+No browser-store installation is required.
 
 ## Verify the installation
 
 ### Check the local service
 
-```bash
-curl http://127.0.0.1:8766/health
+Open this address in a browser:
+
+```text
+http://127.0.0.1:8766/health
 ```
 
 Expected result:
 
 ```json
-{"ok":true,"version":"0.1.1","pid":12345}
+{"ok":true,"version":"0.2.0","pid":12345}
 ```
 
-You can also inspect the user service:
+Linux/macOS can also use:
 
 ```bash
-systemctl --user status catfood-atom.service
+curl http://127.0.0.1:8766/health
+```
+
+Windows PowerShell can use:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8766/health
 ```
 
 ### Check that metrics are arriving
 
-Open `https://chatgpt.com/`, use it normally for a few seconds, then run:
+Open `https://chatgpt.com/`, use it normally for a few seconds, then run the status tool from the repository checkout.
+
+Linux / macOS:
 
 ```bash
-./status.py
+python3 status.py
+```
+
+Windows:
+
+```powershell
+py -3 .\status.py
 ```
 
 Example output:
@@ -127,19 +205,13 @@ input: 32.0 ms; queue: 4.0 ms
 render: 245 DOM updates; 0.0 ms long tasks; max gap 26.4 ms
 ```
 
-The exact values will vary by session and machine.
+The exact values vary by session and machine.
 
 ## Use
 
-Leave the extension enabled and use ChatGPT Web normally.
+Leave the extension enabled and use ChatGPT Web normally. Run `status.py` whenever you want a quick local summary.
 
-For a quick terminal summary:
-
-```bash
-./status.py
-```
-
-The extension observes browser-side performance signals and sends only the allowed metric fields to the local service.
+The extension observes browser-side performance signals and sends only allowed metric fields to the local loopback service.
 
 ## Update
 
@@ -147,64 +219,107 @@ From the repository directory:
 
 ```bash
 git pull
-./install.sh
 ```
 
-Then open `chrome://extensions` and click **Reload** on **CATFOOD Atom for ChatGPT** so Chrome picks up extension changes.
+Then reinstall the local payload.
+
+Linux / macOS:
+
+```bash
+python3 install.py
+```
+
+Windows:
+
+```powershell
+py -3 .\install.py
+```
+
+Finally, open your browser's extensions page and click **Reload** on **CATFOOD Atom for ChatGPT** so the browser picks up extension changes.
 
 ## Uninstall
 
-First remove **CATFOOD Atom for ChatGPT** from `chrome://extensions`.
+Remove **CATFOOD Atom for ChatGPT** from your browser's extensions page first.
 
 Then run:
 
-```bash
-systemctl --user disable --now catfood-atom.service
-rm -f "$HOME/.config/systemd/user/catfood-atom.service"
-systemctl --user daemon-reload
-rm -rf "$HOME/.local/lib/catfood-atom-for-chatgpt"
-```
-
-The local metrics log is stored separately. To delete it too:
+Linux / macOS:
 
 ```bash
-rm -rf "$HOME/.local/state/catfood-atom"
+python3 install.py --uninstall
 ```
 
-Deleting the repository checkout after uninstall is optional.
+Windows:
 
-## Troubleshooting
+```powershell
+py -3 .\install.py --uninstall
+```
 
-### `./status.py` cannot connect
+By default, uninstall removes the application and background-startup entry but preserves locally collected metrics.
 
-Check the service:
+To remove the local metrics too:
+
+Linux / macOS:
+
+```bash
+python3 install.py --uninstall --purge-state
+```
+
+Windows:
+
+```powershell
+py -3 .\install.py --uninstall --purge-state
+```
+
+Deleting the repository checkout afterward is optional.
+
+## Platform-specific troubleshooting
+
+### Linux
+
+Service status:
 
 ```bash
 systemctl --user status catfood-atom.service
 ```
 
-Recent service logs:
+Recent logs:
 
 ```bash
 journalctl --user -u catfood-atom.service -n 50 --no-pager
 ```
 
+### macOS
+
+Confirm the LaunchAgent exists:
+
+```bash
+ls ~/Library/LaunchAgents/com.catfood.atom.chatgpt.plist
+```
+
+The installed application directory also contains `atomd.stdout.log` and `atomd.stderr.log`.
+
+### Windows
+
+Confirm that the Startup entry exists by opening:
+
+```text
+shell:startup
+```
+
+You should see `catfood-atom.cmd`.
+
 ### The extension is installed but no metrics appear
 
-1. Confirm the extension is enabled in `chrome://extensions`.
+1. Confirm the extension is enabled.
 2. Reload the `chatgpt.com` tab after loading or reloading the extension.
-3. Use ChatGPT Web for a few seconds.
-4. Run `./status.py` again.
+3. Confirm `http://127.0.0.1:8766/health` responds.
+4. Use ChatGPT Web for a few seconds.
+5. Run `status.py` again.
 
 ### Port `8766` is already in use
 
-Check what is listening on it:
-
-```bash
-ss -ltnp | grep ':8766'
-```
-
-CATFOOD Atom expects its local service to own `127.0.0.1:8766`.
+Another process may already own the local port. Stop the conflicting process, then run the installer again.
 
 ## Current scope
 

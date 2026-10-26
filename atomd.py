@@ -1,15 +1,26 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import argparse, json, os, threading, time
+import argparse, json, os, sys, threading, time
 from collections import Counter, deque
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.1.1"
+VERSION = "0.2.0"
 MAX_EVENTS = 5000
 MAX_BODY = 64 * 1024
-STATE_DIR = Path.home() / ".local" / "state" / "catfood-atom"
+def _state_dir():
+    home = Path.home()
+    if sys.platform.startswith("linux"):
+        return Path(os.environ.get("XDG_STATE_HOME", home / ".local" / "state")) / "catfood-atom"
+    if sys.platform == "darwin":
+        return home / "Library" / "Application Support" / "CATFOOD Atom for ChatGPT" / "state"
+    if os.name == "nt":
+        local = Path(os.environ.get("LOCALAPPDATA", home / "AppData" / "Local"))
+        return local / "CATFOOD Atom for ChatGPT" / "state"
+    return home / ".catfood-atom" / "state"
+
+STATE_DIR = _state_dir()
 LOG_PATH = STATE_DIR / "events.jsonl"
 ALLOWED_KINDS = {"net", "render", "longtask", "frame", "input", "layout", "navigation", "visibility", "tab", "extension", "test"}
 ALLOWED_FIELDS = {
