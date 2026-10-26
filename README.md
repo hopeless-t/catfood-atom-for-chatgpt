@@ -24,7 +24,7 @@ The browser extension is shared across all three systems. The installer only cha
 - HTTP status counts, including 429 responses
 - Request bursts and concurrent activity
 - Interaction latency
-- DOM update volume
+- Structural DOM update volume
 - Long main-thread tasks
 - Frame stalls and jank
 - Layout instability
@@ -124,7 +124,7 @@ The installer copies the service, status tool, and extension into a stable per-u
 A successful install prints a health response similar to:
 
 ```json
-{"ok":true,"version":"0.2.0","pid":12345}
+{"ok":true,"version":"0.2.1","pid":12345}
 ```
 
 ### 3. Load the browser extension
@@ -164,7 +164,7 @@ http://127.0.0.1:8766/health
 Expected result:
 
 ```json
-{"ok":true,"version":"0.2.0","pid":12345}
+{"ok":true,"version":"0.2.1","pid":12345}
 ```
 
 Linux/macOS can also use:
