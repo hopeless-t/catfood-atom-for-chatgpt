@@ -31,6 +31,12 @@ The browser extension is shared across all three systems. The installer only cha
 
 All metrics stay on the local machine.
 
+## Design principle
+
+CATFOOD Atom is meant to remain useful when the person using it is tired, under pressure, or does not already know web-performance terminology. The interface therefore keeps the real technical term visible **and** explains it in plain language beside it. Experts keep the vocabulary they need; everyone else can understand the same measurement without leaving the tool to study first.
+
+The quick popup answers “what is happening?”; **Open Analysis** gives the deeper diagnosis, timeline, findings, and glossary.
+
 ## Privacy
 
 CATFOOD Atom does **not** store:
@@ -124,7 +130,7 @@ The installer copies the service, status tool, and extension into a stable per-u
 A successful install prints a health response similar to:
 
 ```json
-{"ok":true,"version":"0.2.2","pid":12345}
+{"ok":true,"version":"0.3.0","pid":12345}
 ```
 
 ### 3. Load the browser extension
@@ -164,7 +170,7 @@ http://127.0.0.1:8766/health
 Expected result:
 
 ```json
-{"ok":true,"version":"0.2.2","pid":12345}
+{"ok":true,"version":"0.3.0","pid":12345}
 ```
 
 Linux/macOS can also use:
@@ -323,16 +329,19 @@ Another process may already own the local port. Stop the conflicting process, th
 
 ## Metric glossary
 
-The popup uses plain-language labels first and keeps technical terms as secondary detail.
+CATFOOD Atom keeps the real technical term visible and follows it with a plain-language explanation. You should not need to already know web-performance vocabulary to use the tool.
 
-- **Server response wait** — TTFB-like proxy. Time from a ChatGPT request starting until response headers arrive.
-- **Requests at once** — request burst. The busiest one-second request window in the latest 60 seconds.
-- **Click / typing delay** — interaction latency. The slowest observed input interaction in the latest 60 seconds.
-- **Screen stutter** — maximum frame gap. A longer gap means the page stopped updating smoothly for longer.
-- **Page update work** — DOM mutations. Structural changes to the browser's in-memory representation of the page.
-- **Rate-limit errors** — HTTP 429 responses.
-- **Main-thread long task** — browser main-thread work lasting at least 50 ms.
-- **Jank** — visible UI sluggishness or stuttering.
+- **TTFB-like proxy** — *Server response wait.* Atom currently measures from a ChatGPT request starting until response headers arrive. TTFB itself means Time To First Byte; the `-like proxy` label is intentional because this is not claimed to be exact Navigation Timing TTFB.
+- **Request burst** — *Requests arriving together.* The busiest one-second request-start window in the latest 60 seconds.
+- **Interaction latency** — *Click / typing delay.* The slowest observed click, key, pointer, or input interaction in the latest 60 seconds.
+- **Max frame gap** — *Screen stutter.* The longest observed pause between visual frames.
+- **DOM mutations** — *Page update work.* DOM means Document Object Model, the browser's in-memory tree representing the page. A mutation is a structural change to that tree.
+- **HTTP 429** — *Rate-limit error.* The standard HTTP status `Too Many Requests`; the service refused that request under its current rate/admission limits.
+- **Long Task** — *Main UI thread busy for a long time.* A browser main-thread task lasting at least 50 ms. Input and rendering may have to wait while it runs.
+- **Jank** — *Visible stutter or sluggishness.* A common web-performance term for UI that does not update smoothly.
+- **Layout shift** — *Page content moved unexpectedly.* Geometry changed without a recent user interaction.
+
+The extension popup gives a quick view. Click **Open Analysis** for a full local dashboard with a diagnosis, live metrics, findings, a recent-event timeline, and this glossary.
 
 ## Current scope
 
