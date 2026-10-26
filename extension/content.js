@@ -1,0 +1,11 @@
+(()=>{
+  const send=e=>{try{chrome.runtime.sendMessage({source:"catfood-atom",event:e});}catch(_){}};
+  let batch={mutations:0,added:0,removed:0,attributes:0,characters:0}, timer=null;
+  const flush=()=>{timer=null;if(!batch.mutations)return;send({ts:Date.now(),kind:"render",...batch,visible:document.visibilityState==="visible"});batch={mutations:0,added:0,removed:0,attributes:0,characters:0};};
+  const boot=()=>{if(!document.documentElement)return requestAnimationFrame(boot);const mo=new MutationObserver(rs=>{for(const r of rs){batch.mutations++;if(r.type==="childList"){batch.added+=r.addedNodes.length;batch.removed+=r.removedNodes.length}else if(r.type==="attributes")batch.attributes++;else if(r.type==="characterData")batch.characters++;}if(!timer)timer=setTimeout(flush,500);});mo.observe(document.documentElement,{subtree:true,childList:true,attributes:true,characterData:true});};boot();
+  try{const p=new PerformanceObserver(l=>{for(const e of l.getEntries())send({ts:Date.now(),kind:"longtask",duration_ms:e.duration,visible:document.visibilityState==="visible"});});p.observe({type:"longtask",buffered:true});}catch(_){}
+  try{const p=new PerformanceObserver(l=>{for(const e of l.getEntries())send({ts:Date.now(),kind:"layout",layout_shift:e.value,had_recent_input:!!e.hadRecentInput,visible:document.visibilityState==="visible"});});p.observe({type:"layout-shift",buffered:true});}catch(_){}
+  try{const p=new PerformanceObserver(l=>{for(const e of l.getEntries()){if(!["click","pointerdown","pointerup","keydown","keyup","input"].includes(e.name))continue;const a=e.processingStart||e.startTime,b=e.processingEnd||a;send({ts:Date.now(),kind:"input",event_type:e.name,duration_ms:e.duration||0,input_delay_ms:Math.max(0,a-e.startTime),processing_ms:Math.max(0,b-a),visible:document.visibilityState==="visible"});}});p.observe({type:"event",buffered:true,durationThreshold:16});}catch(_){}
+  let last=performance.now(),frames=0,jank=0,gapMax=0,start=last;
+  function raf(now){const gap=now-last;last=now;frames++;gapMax=Math.max(gapMax,gap);if(gap>50)jank++;if(now-start>=1000){send({ts:Date.now(),kind:"frame",frame_count:frames,jank_frames:jank,max_gap_ms:gapMax,visible:document.visibilityState==="visible"});frames=0;jank=0;gapMax=0;start=now;}requestAnimationFrame(raf)}requestAnimationFrame(raf);
+})();
