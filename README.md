@@ -124,7 +124,7 @@ The installer copies the service, status tool, and extension into a stable per-u
 A successful install prints a health response similar to:
 
 ```json
-{"ok":true,"version":"0.2.1","pid":12345}
+{"ok":true,"version":"0.2.2","pid":12345}
 ```
 
 ### 3. Load the browser extension
@@ -164,7 +164,7 @@ http://127.0.0.1:8766/health
 Expected result:
 
 ```json
-{"ok":true,"version":"0.2.1","pid":12345}
+{"ok":true,"version":"0.2.2","pid":12345}
 ```
 
 Linux/macOS can also use:
@@ -320,6 +320,19 @@ You should see `catfood-atom.cmd`.
 ### Port `8766` is already in use
 
 Another process may already own the local port. Stop the conflicting process, then run the installer again.
+
+## Metric glossary
+
+The popup uses plain-language labels first and keeps technical terms as secondary detail.
+
+- **Server response wait** — TTFB-like proxy. Time from a ChatGPT request starting until response headers arrive.
+- **Requests at once** — request burst. The busiest one-second request window in the latest 60 seconds.
+- **Click / typing delay** — interaction latency. The slowest observed input interaction in the latest 60 seconds.
+- **Screen stutter** — maximum frame gap. A longer gap means the page stopped updating smoothly for longer.
+- **Page update work** — DOM mutations. Structural changes to the browser's in-memory representation of the page.
+- **Rate-limit errors** — HTTP 429 responses.
+- **Main-thread long task** — browser main-thread work lasting at least 50 ms.
+- **Jank** — visible UI sluggishness or stuttering.
 
 ## Current scope
 

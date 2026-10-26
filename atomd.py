@@ -6,7 +6,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.2.1"
+VERSION = "0.2.2"
 MAX_EVENTS = 5000
 MAX_BODY = 64 * 1024
 def _state_dir():

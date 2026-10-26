@@ -1,1 +1,23 @@
-<!doctype html><html><head><meta charset="utf-8"><style>body{font:13px system-ui;width:340px;margin:0;background:#111;color:#eee}.w{padding:14px}.g{display:grid;grid-template-columns:1fr 1fr;gap:8px}.c{background:#1c1c1c;border:1px solid #333;border-radius:8px;padding:9px}.n{font-size:20px;font-weight:700}.l{font-size:11px;color:#999}.f{margin-top:8px;padding:8px;background:#241c1c;border-radius:7px}</style></head><body><div class="w"><h3>CATFOOD Atom for ChatGPT</h3><div class="g"><div class="c"><div class="n" id="ttfb">–</div><div class="l">avg TTFB</div></div><div class="c"><div class="n" id="burst">–</div><div class="l">peak req/s</div></div><div class="c"><div class="n" id="input">–</div><div class="l">input latency</div></div><div class="c"><div class="n" id="gap">–</div><div class="l">max frame gap</div></div><div class="c"><div class="n" id="mut">–</div><div class="l">DOM updates</div></div><div class="c"><div class="n" id="r429">–</div><div class="l">HTTP 429</div></div></div><div id="findings"></div><p class="l">Local metrics only. Conversation content is not collected.</p></div><script src="popup.js"></script></body></html>
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+body{font:13px system-ui;width:390px;margin:0;background:#111;color:#eee}.w{padding:14px}.g{display:grid;grid-template-columns:1fr 1fr;gap:8px}.c{background:#1c1c1c;border:1px solid #333;border-radius:8px;padding:10px}.n{font-size:20px;font-weight:700}.l{font-size:11px;color:#aaa}.t{font-size:12px;font-weight:650;margin-top:2px}.tech{font-size:10px;color:#777;margin-top:2px}.f{margin-top:8px;padding:9px;background:#241c1c;border-radius:7px}.ft{font-weight:650}.fd{font-size:11px;color:#bbb;margin-top:3px}details{margin-top:12px;background:#181818;border:1px solid #333;border-radius:8px;padding:9px}summary{cursor:pointer;font-weight:650}.d{margin:9px 0}.d b{display:block}.d span{display:block;font-size:11px;color:#aaa;margin-top:2px;line-height:1.35}.note{font-size:11px;color:#888;margin-top:12px;line-height:1.35}</style></head>
+<body><div class="w"><h3>CATFOOD Atom for ChatGPT</h3><div class="g">
+<div class="c"><div class="n" id="ttfb">–</div><div class="t">Server response wait</div><div class="tech">Technical: TTFB-like proxy</div></div>
+<div class="c"><div class="n" id="burst">–</div><div class="t">Requests at once</div><div class="tech">Technical: request burst</div></div>
+<div class="c"><div class="n" id="input">–</div><div class="t">Click / typing delay</div><div class="tech">Technical: interaction latency</div></div>
+<div class="c"><div class="n" id="gap">–</div><div class="t">Screen stutter</div><div class="tech">Technical: max frame gap</div></div>
+<div class="c"><div class="n" id="mut">–</div><div class="t">Page update work</div><div class="tech">Technical: DOM mutations</div></div>
+<div class="c"><div class="n" id="r429">–</div><div class="t">Rate-limit errors</div><div class="tech">Technical: HTTP 429</div></div>
+</div>
+<div id="findings"></div>
+<details><summary>What do these numbers mean?</summary>
+<div class="d"><b>Server response wait</b><span>From a ChatGPT request starting until its response headers arrive. This is a TTFB-like measurement: lower usually means less waiting before the response begins.</span></div>
+<div class="d"><b>Requests at once</b><span>The busiest one-second window in the last 60 seconds. A high value means many ChatGPT requests started close together.</span></div>
+<div class="d"><b>Click / typing delay</b><span>The slowest observed click, key, pointer, or input interaction in the last 60 seconds. Higher values mean the page felt less responsive.</span></div>
+<div class="d"><b>Screen stutter</b><span>The longest observed gap between animation frames. A large gap means the screen stopped updating smoothly for longer.</span></div>
+<div class="d"><b>Page update work</b><span>How many structural DOM changes were observed in the last 60 seconds. DOM is the browser's in-memory tree representing the page. More changes are not automatically bad, but very high activity can mean more browser work.</span></div>
+<div class="d"><b>Rate-limit errors</b><span>HTTP 429 means the service rejected a request because too many requests were accepted for the current limit or admission state.</span></div>
+<div class="d"><b>Main-thread long task</b><span>A continuous browser task lasting at least 50 ms. While it runs, clicks, typing, rendering, and scrolling may have to wait.</span></div>
+<div class="d"><b>Jank</b><span>A general web-performance term for visible UI sluggishness or stuttering, often associated with long main-thread work or blocked rendering.</span></div>
+</details>
+<p class="note">All cards summarize the most recent 60 seconds. Local metrics only. Conversation content is not collected.</p></div><script src="popup.js"></script></body></html>

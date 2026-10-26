@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "CATFOOD Atom for ChatGPT",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "A local, privacy-preserving performance observer for ChatGPT Web.",
   "permissions": [
     "webRequest",
