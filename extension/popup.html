@@ -5,7 +5,7 @@ body{font:13px system-ui;width:410px;margin:0;background:#111;color:#eee}.w{padd
 <div class="hero"><h3>CATFOOD Atom for ChatGPT</h3><button class="open" id="openAnalysis">Open Analysis</button></div>
 <div class="g">
 <div class="c"><div class="n" id="ttfb">–</div><div class="term">TTFB-like proxy</div><div class="plain">Server response wait — how long until ChatGPT starts replying.</div></div>
-<div class="c"><div class="n" id="burst">–</div><div class="term">Request burst</div><div class="plain">How many ChatGPT requests started together in the busiest second.</div></div>
+<div class="c"><div class="n" id="burst">–</div><div class="term">API request burst</div><div class="plain">How many ChatGPT requests started together in the busiest second.</div></div>
 <div class="c"><div class="n" id="input">–</div><div class="term">Interaction latency</div><div class="plain">Click / typing delay — how long the page took to react.</div></div>
 <div class="c"><div class="n" id="gap">–</div><div class="term">Max frame gap</div><div class="plain">Screen stutter — the longest pause between visual updates.</div></div>
 <div class="c"><div class="n" id="mut">–</div><div class="term">DOM mutations</div><div class="plain">Page update work — structural changes made to the page.</div></div>
@@ -14,7 +14,7 @@ body{font:13px system-ui;width:410px;margin:0;background:#111;color:#eee}.w{padd
 <div id="findings"></div>
 <details><summary>Terms, explained gently</summary>
 <div class="d"><b>TTFB-like proxy</b><span>TTFB means “Time To First Byte.” CATFOOD Atom currently measures from request start until response headers arrive, so it is deliberately labeled TTFB-like rather than exact browser Navigation Timing TTFB. Smaller usually means less waiting before a response begins.</span></div>
-<div class="d"><b>Request burst</b><span>A cluster of requests starting close together. Atom reports the busiest one-second window in the latest 60 seconds.</span></div>
+<div class="d"><b>API request burst</b><span>A cluster of requests starting close together. Atom reports the busiest one-second window in the latest 60 seconds.</span></div>
 <div class="d"><b>Interaction latency</b><span>The time associated with a click, key, pointer, or input interaction. High values are the “I pressed it, why did nothing happen?” feeling.</span></div>
 <div class="d"><b>Max frame gap / jank</b><span>Browsers normally update the screen repeatedly. A long gap means the screen paused. “Jank” is the common performance term for visible stutter or sluggishness.</span></div>
 <div class="d"><b>DOM mutations</b><span>DOM means Document Object Model: the browser's in-memory tree for the page. A mutation is a structural change to that tree. Many mutations are not automatically bad, but they can represent extra browser work.</span></div>

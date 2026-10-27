@@ -6,7 +6,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.3.1"
+VERSION = "0.3.2"
 MAX_EVENTS = 5000
 MAX_BODY = 64 * 1024
 def _state_dir():
@@ -94,13 +94,14 @@ class Store:
         status_counts = Counter(int(e.get("status", 0) or 0) for e in ends)
         category_counts = Counter(e.get("category", "other") for e in ends)
         ttfb = [float(e.get("ttfb_ms", 0) or 0) for e in heads]
-        issue_times = sorted(float(e.get("ts", 0) or 0) for e in starts)
-        def burst(window):
+        def peak_burst(events, window):
+            issue_times = sorted(float(e.get("ts", 0) or 0) for e in events)
             best = left = 0
             for right, t in enumerate(issue_times):
                 while left <= right and t - issue_times[left] > window: left += 1
                 best = max(best, right - left + 1)
             return best
+        api_starts = [e for e in starts if e.get("category") == "api"]
         lifecycle = [(float(e.get("ts", 0)), 1) for e in starts]
         lifecycle += [(float(e.get("ts", 0)), -1) for e in ends]
         active = max_active = 0
@@ -117,7 +118,7 @@ class Store:
 
         findings = []
         if status_counts.get(429, 0): findings.append({"severity":"high","id":"rate_limit","detail":f"{status_counts[429]} HTTP 429 responses in 60s"})
-        if burst(1000) >= 20: findings.append({"severity":"medium","id":"request_burst","detail":f"peak {burst(1000)} requests/s"})
+        if peak_burst(api_starts, 1000) >= 20: findings.append({"severity":"medium","id":"request_burst","detail":f"peak {peak_burst(api_starts, 1000)} API requests/s"})
         if mutations > 1000: findings.append({"severity":"medium","id":"ui_update_volume","detail":f"{mutations} DOM mutations in 60s"})
         if long_ms > 200: findings.append({"severity":"high","id":"main_thread_load","detail":f"{round(long_ms,1)} ms long-task time in 60s"})
         if gap > 100 or jank > 10: findings.append({"severity":"high","id":"frame_stalls","detail":f"max frame gap {round(gap,1)} ms"})
@@ -128,7 +129,8 @@ class Store:
             "version": VERSION, "window_ms": 60_000, "events_total": len(events),
             "network": {"issued":len(starts), "completed":len(ends), "max_active":max_active,
                         "avg_ttfb_ms":round(sum(ttfb)/len(ttfb),2) if ttfb else 0,
-                        "max_requests_1s":burst(1000), "max_requests_5s":burst(5000),
+                        "max_requests_1s":peak_burst(starts, 1000), "max_requests_5s":peak_burst(starts, 5000),
+                        "max_api_requests_1s":peak_burst(api_starts, 1000), "max_api_requests_5s":peak_burst(api_starts, 5000),
                         "status_counts":{str(k):v for k,v in status_counts.items()}, "category_counts":dict(category_counts)},
             "interaction": {"events":len(inputs), "max_duration_ms":round(input_total,2), "max_input_delay_ms":round(input_queue,2)},
             "render": {"mutations":mutations, "long_tasks":len(longs), "long_task_ms":round(long_ms,2),

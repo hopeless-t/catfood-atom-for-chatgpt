@@ -132,7 +132,7 @@ The installer copies the service, status tool, and extension into a stable per-u
 A successful install prints a health response similar to:
 
 ```json
-{"ok":true,"version":"0.3.1","pid":12345}
+{"ok":true,"version":"0.3.2","pid":12345}
 ```
 
 ### 3. Load the browser extension
@@ -172,7 +172,7 @@ http://127.0.0.1:8766/health
 Expected result:
 
 ```json
-{"ok":true,"version":"0.3.1","pid":12345}
+{"ok":true,"version":"0.3.2","pid":12345}
 ```
 
 Linux/macOS can also use:
@@ -334,7 +334,7 @@ Another process may already own the local port. Stop the conflicting process, th
 CATFOOD Atom keeps the real technical term visible and follows it with a plain-language explanation. You should not need to already know web-performance vocabulary to use the tool.
 
 - **TTFB-like proxy** — *Server response wait.* Atom currently measures from a ChatGPT request starting until response headers arrive. TTFB itself means Time To First Byte; the `-like proxy` label is intentional because this is not claimed to be exact Navigation Timing TTFB.
-- **Request burst** — *Requests arriving together.* The busiest one-second request-start window in the latest 60 seconds.
+- **API request burst** — *API calls arriving together.* The busiest one-second API request-start window in the latest 60 seconds. Asset/document loads are kept separate so normal page startup does not become a false request-pressure warning.
 - **Interaction latency** — *Click / typing delay.* The slowest observed click, key, pointer, or input interaction in the latest 60 seconds.
 - **Max frame gap** — *Screen stutter.* The longest observed pause between visual frames.
 - **DOM mutations** — *Page update work.* DOM means Document Object Model, the browser's in-memory tree representing the page. A mutation is a structural change to that tree.

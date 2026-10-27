@@ -15,6 +15,14 @@ try:
   s=json.load(urllib.request.urlopen('http://127.0.0.1:18766/snapshot'))
   assert s['network']['issued']==1 and s['network']['completed']==1
   assert s['render']['mutations']==2
+  now=time.time()*1000
+  post([{'kind':'net','stage':'start','category':'asset','ts':now+i} for i in range(25)])
+  s=json.load(urllib.request.urlopen('http://127.0.0.1:18766/snapshot'))
+  assert s['network']['max_requests_1s']>=25 and s['network']['max_api_requests_1s']<20
+  assert not any(f['id']=='request_burst' for f in s['findings'])
+  post([{'kind':'net','stage':'start','category':'api','ts':now+100+i} for i in range(20)])
+  s=json.load(urllib.request.urlopen('http://127.0.0.1:18766/snapshot'))
+  assert any(f['id']=='request_burst' for f in s['findings'])
   e=json.load(urllib.request.urlopen('http://127.0.0.1:18766/events?limit=1'))['events'][0]
   assert 'secret' not in e
   print('PASS public observer')
