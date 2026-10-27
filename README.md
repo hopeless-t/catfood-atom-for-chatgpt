@@ -31,6 +31,8 @@ The browser extension is shared across all three systems. The installer only cha
 
 All metrics stay on the local machine.
 
+The extension batches local observer events before sending them to the loopback service. This reduces the observer's own startup work while preserving the same event fields.
+
 ## Design principle
 
 CATFOOD Atom is meant to remain useful when the person using it is tired, under pressure, or does not already know web-performance terminology. The interface therefore keeps the real technical term visible **and** explains it in plain language beside it. Experts keep the vocabulary they need; everyone else can understand the same measurement without leaving the tool to study first.
@@ -130,7 +132,7 @@ The installer copies the service, status tool, and extension into a stable per-u
 A successful install prints a health response similar to:
 
 ```json
-{"ok":true,"version":"0.3.0","pid":12345}
+{"ok":true,"version":"0.3.1","pid":12345}
 ```
 
 ### 3. Load the browser extension
@@ -170,7 +172,7 @@ http://127.0.0.1:8766/health
 Expected result:
 
 ```json
-{"ok":true,"version":"0.3.0","pid":12345}
+{"ok":true,"version":"0.3.1","pid":12345}
 ```
 
 Linux/macOS can also use:

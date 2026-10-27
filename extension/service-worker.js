@@ -1,13 +1,24 @@
 const LOCAL = "http://127.0.0.1:8766";
 const active = new Map();
+let pending = [], flushTimer = null, flushing = false;
 function category(type) {
   if (["main_frame","sub_frame"].includes(type)) return "document";
   if (["script","stylesheet","image","font","media"].includes(type)) return "asset";
   if (["xmlhttprequest","websocket"].includes(type)) return "api";
   return "other";
 }
-async function emit(event) {
-  try { await fetch(LOCAL+"/event", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(event),cache:"no-store"}); } catch(_) {}
+function scheduleFlush() {
+  if (pending.length >= 64) { void flush(); return; }
+  if (flushTimer == null) flushTimer = setTimeout(()=>{flushTimer=null; void flush();}, 120);
+}
+function emit(event) { pending.push(event); scheduleFlush(); }
+async function flush() {
+  if (flushing || !pending.length) return;
+  if (flushTimer != null) { clearTimeout(flushTimer); flushTimer = null; }
+  const batch = pending.splice(0, 200);
+  flushing = true;
+  try { await fetch(LOCAL+"/event", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(batch),cache:"no-store"}); } catch(_) {}
+  finally { flushing = false; if (pending.length) scheduleFlush(); }
 }
 chrome.webRequest.onBeforeRequest.addListener(d=>{
   if (!d.url.startsWith("https://chatgpt.com/")) return;

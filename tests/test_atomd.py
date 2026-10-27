@@ -11,9 +11,10 @@ try:
     q=urllib.request.Request('http://127.0.0.1:18766/event',data=json.dumps(e).encode(),headers={'Content-Type':'application/json'},method='POST');urllib.request.urlopen(q).read()
   post({'kind':'net','stage':'start','category':'api','secret':'drop-me'})
   post({'kind':'net','stage':'headers','category':'api','ttfb_ms':20,'status':200})
-  post({'kind':'net','stage':'end','category':'api','duration_ms':30,'status':200})
+  post([{'kind':'net','stage':'end','category':'api','duration_ms':30,'status':200},{'kind':'render','mutations':2}])
   s=json.load(urllib.request.urlopen('http://127.0.0.1:18766/snapshot'))
   assert s['network']['issued']==1 and s['network']['completed']==1
+  assert s['render']['mutations']==2
   e=json.load(urllib.request.urlopen('http://127.0.0.1:18766/events?limit=1'))['events'][0]
   assert 'secret' not in e
   print('PASS public observer')

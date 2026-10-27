@@ -6,7 +6,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-VERSION = "0.3.0"
+VERSION = "0.3.1"
 MAX_EVENTS = 5000
 MAX_BODY = 64 * 1024
 def _state_dir():
@@ -36,7 +36,7 @@ class Store:
         self.lock = threading.Lock()
         STATE_DIR.mkdir(parents=True, exist_ok=True)
 
-    def add(self, raw: dict):
+    def _normalize(self, raw: dict):
         e = {k: raw[k] for k in ALLOWED_FIELDS if k in raw}
         e["ts"] = float(e.get("ts") or time.time() * 1000)
         e["kind"] = str(e.get("kind", "test"))[:32]
@@ -54,14 +54,25 @@ class Store:
                 except Exception: e.pop(key, None)
         for key in ("visible", "had_recent_input"):
             if key in e: e[key] = bool(e[key])
+        return e
+
+    def add_many(self, raws):
+        items = [self._normalize(raw) for raw in raws if isinstance(raw, dict)]
+        if not items:
+            return []
+        lines = "".join(json.dumps(e, ensure_ascii=False, separators=(",", ":")) + "\n" for e in items)
         with self.lock:
-            self.events.append(e)
+            self.events.extend(items)
             try:
                 with LOG_PATH.open("a", encoding="utf-8") as f:
-                    f.write(json.dumps(e, ensure_ascii=False, separators=(",", ":")) + "\n")
+                    f.write(lines)
             except OSError:
                 pass
-        return e
+        return items
+
+    def add(self, raw: dict):
+        items = self.add_many([raw])
+        return items[0] if items else None
 
     def reset(self):
         with self.lock: self.events.clear()
@@ -161,8 +172,7 @@ class Handler(BaseHTTPRequestHandler):
             if n <= 0 or n > MAX_BODY: return self._json(413, {"error":"bad_size"})
             data = json.loads(self.rfile.read(n))
             if isinstance(data, list):
-                for e in data[:200]:
-                    if isinstance(e, dict): STORE.add(e)
+                STORE.add_many(data[:200])
                 return self._json(200, {"ok":True})
             if isinstance(data, dict): STORE.add(data); return self._json(200, {"ok":True})
         except Exception as exc: return self._json(400, {"error":type(exc).__name__})
