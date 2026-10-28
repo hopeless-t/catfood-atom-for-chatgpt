@@ -7,13 +7,46 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 import urllib.request, urllib.error
 
-VERSION = "0.5.55"
+VERSION = "0.5.57"
 MAX_EVENTS = 5000
 MAX_BODY = 64 * 1024
 SURFACE_LOCK = threading.Lock()
 SURFACE_CLIENT_MAX = 64
 SURFACES = OrderedDict()
 SURFACE_HOSTS = {"chatgpt.com", "auth.openai.com"}
+CHANGE_COND = threading.Condition()
+CHANGE_SEQ = 0
+CLIENT_CHANGE_MAX = 64
+CLIENT_CHANGE_SEQS = OrderedDict()
+
+def mark_client_change(client):
+    global CHANGE_SEQ
+    client = str(client or "")[:64]
+    if not client: return 0
+    with CHANGE_COND:
+        CHANGE_SEQ += 1
+        CLIENT_CHANGE_SEQS[client] = CHANGE_SEQ
+        CLIENT_CHANGE_SEQS.move_to_end(client)
+        while len(CLIENT_CHANGE_SEQS) > CLIENT_CHANGE_MAX:
+            CLIENT_CHANGE_SEQS.popitem(last=False)
+        CHANGE_COND.notify_all()
+        return CHANGE_SEQ
+
+def client_change_seq(client):
+    client = str(client or "")[:64]
+    with CHANGE_COND:
+        return int(CLIENT_CHANGE_SEQS.get(client, 0) or 0)
+
+def wait_client_change(client, after, timeout_s):
+    client = str(client or "")[:64]
+    deadline = time.monotonic() + max(0.0, timeout_s)
+    with CHANGE_COND:
+        while int(CLIENT_CHANGE_SEQS.get(client, 0) or 0) <= after:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0: break
+            CHANGE_COND.wait(remaining)
+        current = int(CLIENT_CHANGE_SEQS.get(client, 0) or 0)
+    return current, current > after
 
 def _surface_path(host: str, raw: str) -> str:
     path = str(raw or "/").split("?", 1)[0].split("#", 1)[0]
@@ -72,6 +105,7 @@ def accept_surface(data):
     with SURFACE_LOCK:
         SURFACES[client] = item; SURFACES.move_to_end(client)
         while len(SURFACES) > SURFACE_CLIENT_MAX: SURFACES.popitem(last=False)
+    mark_client_change(client)
     return dict(item)
 
 
@@ -385,6 +419,7 @@ def accept_batch(batch_id, raws, client_meta=None):
             row["duplicate_batches" if duplicate else "accepted_batches"] += 1
         if duplicate:
             BATCH_DUPLICATE_TOTAL += 1; LAST_BATCH_ID = bid; LAST_BATCH_AT = now
+            if cid: mark_client_change(cid)
             return 0, True
         tagged = [{**raw, "client_id":cid, "client_version":ver, "worker_epoch":epoch} for raw in raws[:200] if isinstance(raw, dict)]
         items = STORE.add_many(tagged)
@@ -392,11 +427,18 @@ def accept_batch(batch_id, raws, client_meta=None):
             old = BATCH_RECEIPTS[0]; BATCH_RECEIPT_SET.discard(old)
         BATCH_RECEIPTS.append(bid); BATCH_RECEIPT_SET.add(bid)
         BATCH_ACCEPTED_TOTAL += 1; LAST_BATCH_ID = bid; LAST_BATCH_AT = now
+        if cid: mark_client_change(cid)
         return len(items), False
 
 def delivery_health():
     with BATCH_RECEIPT_LOCK:
         return {"accepted_batches":BATCH_ACCEPTED_TOTAL,"duplicate_batches":BATCH_DUPLICATE_TOTAL,"last_batch_id":LAST_BATCH_ID,"last_batch_at":LAST_BATCH_AT,"dedupe_window":BATCH_RECEIPTS.maxlen,"client_window":DELIVERY_CLIENT_MAX,"clients":[dict(v) for v in DELIVERY_CLIENTS.values()]}
+
+def world_view(client):
+    sv = surface_view(client)
+    return {"ok":True,"version":VERSION,"pid":os.getpid(),"event_log":{"enabled":PERSIST_EVENTS,"max_bytes":LOG_MAX_BYTES},
+            "delivery":delivery_health(),"snapshot":STORE.snapshot(client),"surface":sv.get("surface"),
+            "scope_client":client,"change_seq":client_change_seq(client)}
 
 class Handler(BaseHTTPRequestHandler):
     server_version = "catfood-atom/" + VERSION
@@ -410,14 +452,28 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
     def _json(self, code, obj):
         body = json.dumps(obj, ensure_ascii=False, separators=(",", ":")).encode()
-        self.send_response(code); self._cors(); self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Content-Length", str(len(body))); self.end_headers(); self.wfile.write(body)
+        try:
+            self.send_response(code); self._cors(); self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(body))); self.end_headers(); self.wfile.write(body)
+        except (BrokenPipeError, ConnectionResetError):
+            # Long-poll/analysis clients may cancel after their own timeout. That is
+            # transport cancellation, not a daemon failure; do not emit a traceback.
+            return
     def do_OPTIONS(self): self.send_response(204); self._cors(); self.end_headers()
     def do_GET(self):
         p = urlparse(self.path)
         if p.path == "/health": return self._json(200, {"ok":True,"version":VERSION,"pid":os.getpid(),"event_log":{"enabled":PERSIST_EVENTS,"max_bytes":LOG_MAX_BYTES},"delivery":delivery_health()})
         q = parse_qs(p.query)
         client = str(q.get("client", [""])[0])[:64] or None
+        if p.path == "/world":
+            if not client: return self._json(400, {"ok":False,"error":"client_required"})
+            return self._json(200, world_view(client))
+        if p.path == "/changes":
+            if not client: return self._json(400, {"ok":False,"error":"client_required"})
+            try: after=max(0,int(q.get("after", [0])[0])); timeout_ms=min(5000,max(0,int(q.get("timeout_ms", [1000])[0])))
+            except Exception: return self._json(400, {"ok":False,"error":"bad_wait_query"})
+            seq, changed = wait_client_change(client, after, timeout_ms/1000.0)
+            return self._json(200, {"ok":True,"version":VERSION,"scope_client":client,"change_seq":seq,"changed":changed})
         if p.path == "/snapshot": return self._json(200, STORE.snapshot(client))
         if p.path == "/surface": return self._json(200, surface_view(client))
         if p.path == "/view":

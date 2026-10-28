@@ -1,6 +1,6 @@
-# v0.5.55
+# v0.5.57
 
-- Current live-matched CATFOOD Atom + Boost build.
-- Adds a privacy-preserving server-wait-tail diagnostic for slow successful GET API traffic.
-- Keeps manual Boost controls conservative by default.
-- Public package excludes private experiment logs, checkpoints, failure ledgers, backups, and research fixtures.
+- Fixes noisy `BrokenPipeError` / `ConnectionResetError` tracebacks when an analysis or long-poll client closes its local connection before the daemon writes the response.
+- Client cancellation is treated as normal transport cancellation; unrelated exceptions are still allowed to surface.
+- Reproduced with eight forced early-disconnect probes after the fix: no traceback, daemon remained active.
+- Includes the current privacy-preserving server-wait-tail diagnostic and the existing conservative Boost defaults.

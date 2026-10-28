@@ -1,10 +1,12 @@
 # CATFOOD Atom + Boost for ChatGPT
 
-**Current release: v0.5.55**
+**Current release: v0.5.57**
 
 ChatGPT Web が重いときに、**何が起きているのかをローカルで観測して、実際に効く改善だけを残す**ための小さなツールです。
 
 CATFOOD Atom は性能信号を観測・分析します。CATFOOD Boost は、実測で有効性を確認できた改善だけを慎重に使います。
+
+**v0.5.57:** analysis/long-poll client が先に接続を閉じた場合に、daemon が不要な BrokenPipe / ConnectionReset traceback を表示しないよう修正しました。
 
 [English](#english)
 
@@ -46,7 +48,7 @@ Adaptive motion は、重い描画フレームが実際に観測されたとき�
 
 - real ChatGPT の matched A/B 5組で reduce-motion candidate は median FCP 約 **9.8%改善**、median Load 約 **6.1%改善**
 - mutation-heavy synthetic workload では MutationObserver callback work を約 **29%削減**
-- v0.5.55 の live readback では duplicate telemetry batches **0**
+- v0.5.57 の live readback では duplicate telemetry batches **0**
 
 効果がほぼ無かった instant scroll や、悪化した offscreen message culling などは採用していません。
 
@@ -129,7 +131,7 @@ Development measurements, not guarantees for every machine or session:
 
 - Five matched real-ChatGPT A/B pairs for the reduce-motion candidate showed about **9.8% better median FCP** and **6.1% better median Load**.
 - A mutation-heavy synthetic workload showed about **29% less MutationObserver callback work** after simplifying the observer path.
-- The live v0.5.55 readback showed **0 duplicate telemetry batches**.
+- The live v0.5.57 readback showed **0 duplicate telemetry batches**.
 
 ### Design principle
 
