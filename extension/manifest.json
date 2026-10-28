@@ -1,15 +1,17 @@
 {
   "manifest_version": 3,
-  "name": "CATFOOD Atom for ChatGPT",
-  "version": "0.3.2",
-  "description": "A local, privacy-preserving performance observer for ChatGPT Web.",
+  "name": "CATFOOD Atom + Boost for ChatGPT",
+  "version": "0.5.55",
+  "description": "Local ChatGPT Web performance observer with optional presentation-safe boost controls.",
   "permissions": [
     "webRequest",
-    "tabs"
+    "tabs",
+    "storage",
+    "scripting"
   ],
   "host_permissions": [
     "https://chatgpt.com/*",
-    "http://127.0.0.1:8766/*"
+    "http://127.0.0.1:8767/*"
   ],
   "background": {
     "service_worker": "service-worker.js"
@@ -20,13 +22,14 @@
         "https://chatgpt.com/*"
       ],
       "js": [
-        "content.js"
+        "content.js",
+        "boost.js"
       ],
-      "run_at": "document_start"
+      "run_at": "document_idle"
     }
   ],
   "action": {
-    "default_title": "CATFOOD Atom for ChatGPT",
+    "default_title": "CATFOOD Atom + Boost for ChatGPT",
     "default_popup": "popup.html"
   }
 }

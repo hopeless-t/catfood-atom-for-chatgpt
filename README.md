@@ -1,235 +1,149 @@
-# CATFOOD Atom for ChatGPT
+# CATFOOD Atom + Boost for ChatGPT
 
-A small local performance observer for ChatGPT Web.
+**Current release: v0.5.55**
 
-It helps answer a simple question: **when ChatGPT Web feels slow, where is the delay coming from?**
+ChatGPT Web が重いときに、**何が起きているのかをローカルで観測して、実際に効く改善だけを残す**ための小さなツールです。
 
-CATFOOD Atom is currently an observer, not a speed-up extension. It does not change, cancel, replay, replace, or bypass ChatGPT requests.
+CATFOOD Atom は性能信号を観測・分析します。CATFOOD Boost は、実測で有効性を確認できた改善だけを慎重に使います。
 
-## Supported desktop systems
+[English](#english)
 
-- Linux
-- macOS
-- Windows 10/11
+## 日本語
 
-The browser extension is shared across all three systems. The installer only changes how the small local metrics service starts in the background:
+### できること
 
-- Linux: `systemd --user`
-- macOS: LaunchAgent (`launchd`)
-- Windows: the current user's Startup folder
-
-## What it can show
-
-- Request timing and TTFB
-- HTTP status counts, including 429 responses
-- Request bursts and concurrent activity
+- ChatGPT API の TTFB: median / average / p95 / max
+- HTTP 429 の検出
+- API request burst / 同時リクエストの観測
+- 遅い成功GETが server wait 側に寄っているかの診断
 - Interaction latency
-- Structural DOM update volume
-- Long main-thread tasks
-- Frame stalls and jank
-- Layout instability
+- Long Animation Frame / UI stall の観測
+- foreground / background tab 負荷の分離
+- layout shift の観測
+- ローカル分析画面
+- ACK付き telemetry delivery と duplicate batch 検出
+- optional Boost controls
 
-All metrics stay on the local machine.
+### Boost
 
-The extension batches local observer events before sending them to the loopback service. This reduces the observer's own startup work while preserving the same event fields.
+手動の Boost 設定は基本的に **OFF** です。
 
-## Design principle
+速そうだから有効化するのではなく、実測で有効性を確認できたものだけを残します。
 
-CATFOOD Atom is meant to remain useful when the person using it is tired, under pressure, or does not already know web-performance terminology. The interface therefore keeps the real technical term visible **and** explains it in plain language beside it. Experts keep the vocabulary they need; everyone else can understand the same measurement without leaving the tool to study first.
+現在の主な状態:
 
-The quick popup answers “what is happening?”; **Open Analysis** gives the deeper diagnosis, timeline, findings, and glossary.
+- Reduce backdrop blur: OFF
+- Force instant scroll: OFF
+- Offscreen message culling: RETIRED
+- Manual reduce motion: OFF
+- Adaptive motion pressure response: ENABLED
 
-## Privacy
+Adaptive motion は、重い描画フレームが実際に観測されたときだけ一時的に animation / transition を抑制し、その後自動的に通常表示へ戻ります。
 
-CATFOOD Atom does **not** store:
+### 実測例
 
-- Conversation text
-- Request bodies
-- Response bodies
-- Cookies
-- Authorization headers
-- Raw URLs
-- Query strings
+以下は開発中の特定 workload での観測結果です。すべてのPC・すべてのChatGPT sessionで同じ改善を保証するものではありません。
 
-The local service listens on loopback only (`127.0.0.1:8766`).
+- real ChatGPT の matched A/B 5組で reduce-motion candidate は median FCP 約 **9.8%改善**、median Load 約 **6.1%改善**
+- mutation-heavy synthetic workload では MutationObserver callback work を約 **29%削減**
+- v0.5.55 の live readback では duplicate telemetry batches **0**
 
-## Requirements
+効果がほぼ無かった instant scroll や、悪化した offscreen message culling などは採用していません。
 
-All systems need:
+### 設計思想
 
-- Python 3
-- Git, if you install by cloning this repository
-- A Chromium-based desktop browser that supports unpacked Manifest V3 extensions, such as Chrome, Chromium, Edge, or Brave
+CATFOODは、派手な高速化機能を増やすことよりも、
+**実際の利用環境で観測された実在の問題をどうしたら減らせるか**を重視しています。
 
-No Node.js, npm, Docker, or cloud account is required.
+効果が確認できない最適化や、別の問題を増やす変更は採用しません。
 
-Linux additionally needs a working `systemd --user` session.
+……その結果、速くなりました。
 
-## Install
+### Privacy
 
-### 1. Clone the repository
+CATFOOD Atom は以下を保存しません。
+
+- 会話本文
+- prompt / response 本文
+- request / response body
+- Cookie
+- Authorization header
+- raw URL
+- query string
+
+ローカルserviceは loopback (`127.0.0.1:8767`) のみを使用します。
+
+### Install
 
 Linux / macOS:
 
 ```bash
-git clone https://github.com/hopeless-t/catfood-atom-for-chatgpt.git
-cd catfood-atom-for-chatgpt
+python3 install.py
 ```
 
 Windows PowerShell:
 
 ```powershell
-git clone https://github.com/hopeless-t/catfood-atom-for-chatgpt.git
-cd catfood-atom-for-chatgpt
-```
-
-### 2. Install the local service
-
-#### Linux
-
-```bash
-python3 install.py
-```
-
-You can also use the wrapper:
-
-```bash
-./install.sh
-```
-
-#### macOS
-
-```bash
-python3 install.py
-```
-
-You can also use:
-
-```bash
-./install.sh
-```
-
-#### Windows
-
-```powershell
 py -3 .\install.py
 ```
 
-If the Python launcher is unavailable:
+その後、Chromium系browserの拡張機能画面で Developer mode を有効にし、**Load unpacked** から `extension` folder を選びます。
 
-```powershell
-python .\install.py
-```
-
-The optional PowerShell wrapper is also available:
-
-```powershell
-.\install.ps1
-```
-
-The installer copies the service, status tool, and extension into a stable per-user application directory, configures background startup for the current OS, starts the local service, and prints the installed extension path.
-
-A successful install prints a health response similar to:
-
-```json
-{"ok":true,"version":"0.3.2","pid":12345}
-```
-
-### 3. Load the browser extension
-
-Open the extension-management page in your Chromium-based browser. For Chrome and Chromium:
-
-```text
-chrome://extensions
-```
-
-For Edge:
-
-```text
-edge://extensions
-```
-
-Then:
-
-1. Enable **Developer mode**.
-2. Choose **Load unpacked**.
-3. Select the `extension` directory printed by the installer.
-4. Confirm that **CATFOOD Atom for ChatGPT** appears and is enabled.
-5. Reload any already-open `chatgpt.com` tabs once.
-
-No browser-store installation is required.
-
-## Verify the installation
-
-### Check the local service
-
-Open this address in a browser:
-
-```text
-http://127.0.0.1:8766/health
-```
-
-Expected result:
-
-```json
-{"ok":true,"version":"0.3.2","pid":12345}
-```
-
-Linux/macOS can also use:
-
-```bash
-curl http://127.0.0.1:8766/health
-```
-
-Windows PowerShell can use:
-
-```powershell
-Invoke-RestMethod http://127.0.0.1:8766/health
-```
-
-### Check that metrics are arriving
-
-Open `https://chatgpt.com/`, use it normally for a few seconds, then run the status tool from the repository checkout.
-
-Linux / macOS:
+確認:
 
 ```bash
 python3 status.py
 ```
 
-Windows:
+---
 
-```powershell
-py -3 .\status.py
-```
+## English
 
-Example output:
+CATFOOD Atom + Boost is a small local tool for diagnosing real performance problems in ChatGPT Web and keeping only improvements that prove useful in measurement.
 
-```text
-CATFOOD Atom for ChatGPT
-requests: 18 issued / 18 completed; peak 6 /s; max active 4
-TTFB: 420.5 ms; HTTP 429: 0
-input: 32.0 ms; queue: 4.0 ms
-render: 245 DOM updates; 0.0 ms long tasks; max gap 26.4 ms
-```
+### What it can show
 
-The exact values vary by session and machine.
+- ChatGPT API TTFB: median / average / p95 / max
+- HTTP 429 responses
+- API request bursts and concurrency
+- Diagnosis of slow successful GETs dominated by server wait
+- Interaction latency
+- Long Animation Frames / UI stalls
+- Foreground vs background tab load
+- Layout shifts
+- Local analysis UI
+- ACKed telemetry delivery with duplicate detection
+- Optional Boost controls
 
-## Use
+### Boost
 
-Leave the extension enabled and use ChatGPT Web normally. Run `status.py` whenever you want a quick local summary.
+Manual Boost controls are **OFF by default**.
 
-The extension observes browser-side performance signals and sends only allowed metric fields to the local loopback service.
+CATFOOD does not enable an optimization just because it sounds faster. Ideas that fail measurement are left disabled or retired.
 
-## Update
+When severe visual-frame pressure is actually observed, the adaptive motion response may reduce animations/transitions temporarily and restores them automatically afterward.
 
-From the repository directory:
+### Observed results
 
-```bash
-git pull
-```
+Development measurements, not guarantees for every machine or session:
 
-Then reinstall the local payload.
+- Five matched real-ChatGPT A/B pairs for the reduce-motion candidate showed about **9.8% better median FCP** and **6.1% better median Load**.
+- A mutation-heavy synthetic workload showed about **29% less MutationObserver callback work** after simplifying the observer path.
+- The live v0.5.55 readback showed **0 duplicate telemetry batches**.
+
+### Design principle
+
+CATFOOD prioritizes reducing real problems observed in actual use over adding impressive-looking optimization features.
+
+Changes that do not show useful results, or that create larger problems elsewhere, are not adopted.
+
+The result happened to be a faster system.
+
+### Privacy
+
+CATFOOD Atom does not store conversation text, prompt/response bodies, cookies, authorization headers, raw URLs, or query strings. The local service listens only on loopback (`127.0.0.1:8767`).
+
+### Install
 
 Linux / macOS:
 
@@ -237,117 +151,23 @@ Linux / macOS:
 python3 install.py
 ```
 
-Windows:
+Windows PowerShell:
 
 ```powershell
 py -3 .\install.py
 ```
 
-Finally, open your browser's extensions page and click **Reload** on **CATFOOD Atom for ChatGPT** so the browser picks up extension changes.
+Then enable Developer mode in your Chromium-based browser, choose **Load unpacked**, and select the `extension` directory.
 
-## Uninstall
-
-Remove **CATFOOD Atom for ChatGPT** from your browser's extensions page first.
-
-Then run:
-
-Linux / macOS:
+Verify with:
 
 ```bash
-python3 install.py --uninstall
+python3 status.py
 ```
 
-Windows:
+## License
 
-```powershell
-py -3 .\install.py --uninstall
-```
-
-By default, uninstall removes the application and background-startup entry but preserves locally collected metrics.
-
-To remove the local metrics too:
-
-Linux / macOS:
-
-```bash
-python3 install.py --uninstall --purge-state
-```
-
-Windows:
-
-```powershell
-py -3 .\install.py --uninstall --purge-state
-```
-
-Deleting the repository checkout afterward is optional.
-
-## Platform-specific troubleshooting
-
-### Linux
-
-Service status:
-
-```bash
-systemctl --user status catfood-atom.service
-```
-
-Recent logs:
-
-```bash
-journalctl --user -u catfood-atom.service -n 50 --no-pager
-```
-
-### macOS
-
-Confirm the LaunchAgent exists:
-
-```bash
-ls ~/Library/LaunchAgents/com.catfood.atom.chatgpt.plist
-```
-
-The installed application directory also contains `atomd.stdout.log` and `atomd.stderr.log`.
-
-### Windows
-
-Confirm that the Startup entry exists by opening:
-
-```text
-shell:startup
-```
-
-You should see `catfood-atom.cmd`.
-
-### The extension is installed but no metrics appear
-
-1. Confirm the extension is enabled.
-2. Reload the `chatgpt.com` tab after loading or reloading the extension.
-3. Confirm `http://127.0.0.1:8766/health` responds.
-4. Use ChatGPT Web for a few seconds.
-5. Run `status.py` again.
-
-### Port `8766` is already in use
-
-Another process may already own the local port. Stop the conflicting process, then run the installer again.
-
-## Metric glossary
-
-CATFOOD Atom keeps the real technical term visible and follows it with a plain-language explanation. You should not need to already know web-performance vocabulary to use the tool.
-
-- **TTFB-like proxy** — *Server response wait.* Atom currently measures from a ChatGPT request starting until response headers arrive. TTFB itself means Time To First Byte; the `-like proxy` label is intentional because this is not claimed to be exact Navigation Timing TTFB.
-- **API request burst** — *API calls arriving together.* The busiest one-second API request-start window in the latest 60 seconds. Asset/document loads are kept separate so normal page startup does not become a false request-pressure warning.
-- **Interaction latency** — *Click / typing delay.* The slowest observed click, key, pointer, or input interaction in the latest 60 seconds.
-- **Max frame gap** — *Screen stutter.* The longest observed pause between visual frames.
-- **DOM mutations** — *Page update work.* DOM means Document Object Model, the browser's in-memory tree representing the page. A mutation is a structural change to that tree.
-- **HTTP 429** — *Rate-limit error.* The standard HTTP status `Too Many Requests`; the service refused that request under its current rate/admission limits.
-- **Long Task** — *Main UI thread busy for a long time.* A browser main-thread task lasting at least 50 ms. Input and rendering may have to wait while it runs.
-- **Jank** — *Visible stutter or sluggishness.* A common web-performance term for UI that does not update smoothly.
-- **Layout shift** — *Page content moved unexpectedly.* Geometry changed without a recent user interaction.
-
-The extension popup gives a quick view. Click **Open Analysis** for a full local dashboard with a diagnosis, live metrics, findings, a recent-event timeline, and this glossary.
-
-## Current scope
-
-This release measures performance. It does not currently optimize ChatGPT Web, bypass rate limits, or alter requests.
+MIT License.
 
 ## Disclaimer
 

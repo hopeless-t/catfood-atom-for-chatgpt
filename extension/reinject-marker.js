@@ -1,0 +1,1 @@
+globalThis.__CATFOOD_RUNTIME_REINJECT__=true;

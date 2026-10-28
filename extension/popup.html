@@ -1,25 +1,22 @@
 <!doctype html>
 <html><head><meta charset="utf-8"><style>
-body{font:13px system-ui;width:410px;margin:0;background:#111;color:#eee}.w{padding:14px}.hero{display:flex;align-items:center;justify-content:space-between;gap:10px}.hero h3{margin:0}.open{border:0;border-radius:8px;padding:9px 11px;background:#eee;color:#111;font-weight:700;cursor:pointer}.g{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.c{background:#1c1c1c;border:1px solid #333;border-radius:8px;padding:10px}.n{font-size:20px;font-weight:700}.term{font-size:12px;font-weight:700;margin-top:3px}.plain{font-size:11px;color:#aaa;margin-top:2px;line-height:1.3}.f{margin-top:8px;padding:9px;background:#241c1c;border-radius:7px}.ft{font-weight:700}.fd{font-size:11px;color:#bbb;margin-top:3px;line-height:1.35}details{margin-top:12px;background:#181818;border:1px solid #333;border-radius:8px;padding:9px}summary{cursor:pointer;font-weight:700}.d{margin:10px 0}.d b{display:block}.d span{display:block;font-size:11px;color:#aaa;margin-top:2px;line-height:1.4}.note{font-size:11px;color:#888;margin-top:12px;line-height:1.35}</style></head>
+body{font:13px system-ui;width:430px;margin:0;background:#111;color:#eee}.w{padding:14px}.hero{display:flex;align-items:center;justify-content:space-between;gap:10px}.hero h3{margin:0}.open{border:0;border-radius:8px;padding:9px 11px;background:#eee;color:#111;font-weight:700;cursor:pointer}.g{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.c{background:#1c1c1c;border:1px solid #333;border-radius:8px;padding:10px}.n{font-size:20px;font-weight:700}.term{font-size:12px;font-weight:700;margin-top:3px}.plain{font-size:11px;color:#aaa;margin-top:2px;line-height:1.3}.boost{margin-top:12px;padding:10px;border:1px solid #334033;background:#151a15;border-radius:9px}.boost h4{margin:0 0 7px}.row{display:flex;justify-content:space-between;gap:8px;align-items:center;margin:7px 0}.row small{display:block;color:#888}.exp{color:#e1c88b}.f{margin-top:8px;padding:9px;background:#241c1c;border-radius:7px}.ft{font-weight:700}.fd{font-size:11px;color:#bbb;margin-top:3px;line-height:1.35}.note{font-size:11px;color:#888;margin-top:12px;line-height:1.35}</style></head>
 <body><div class="w">
-<div class="hero"><h3>CATFOOD Atom for ChatGPT</h3><button class="open" id="openAnalysis">Open Analysis</button></div>
+<div class="hero"><h3>CATFOOD Atom + Boost</h3><button class="open" id="openAnalysis">Open Analysis</button></div>
 <div class="g">
-<div class="c"><div class="n" id="ttfb">–</div><div class="term">TTFB-like proxy</div><div class="plain">Server response wait — how long until ChatGPT starts replying.</div></div>
-<div class="c"><div class="n" id="burst">–</div><div class="term">API request burst</div><div class="plain">How many ChatGPT requests started together in the busiest second.</div></div>
-<div class="c"><div class="n" id="input">–</div><div class="term">Interaction latency</div><div class="plain">Click / typing delay — how long the page took to react.</div></div>
-<div class="c"><div class="n" id="gap">–</div><div class="term">Max frame gap</div><div class="plain">Screen stutter — the longest pause between visual updates.</div></div>
-<div class="c"><div class="n" id="mut">–</div><div class="term">DOM mutations</div><div class="plain">Page update work — structural changes made to the page.</div></div>
-<div class="c"><div class="n" id="r429">–</div><div class="term">HTTP 429</div><div class="plain">Rate-limit errors — requests the service would not accept.</div></div>
+<div class="c"><div class="n" id="ttfb">–</div><div class="term">Median API TTFB</div><div class="plain">Typical API response wait.</div></div>
+<div class="c"><div class="n" id="input">–</div><div class="term">Interaction latency</div><div class="plain">Click / typing delay.</div></div>
+<div class="c"><div class="n" id="gap">–</div><div class="term">Max frame gap / LoAF duration</div><div class="plain">Screen stutter.</div></div>
+<div class="c"><div class="n" id="r429">–</div><div class="term">HTTP 429</div><div class="plain">Rate-limit errors.</div></div>
+</div>
+<div class="boost"><h4>Boost controls</h4>
+<div class="row"><label><input id="enabled" type="checkbox"> Boost enabled<small>Master switch</small></label></div>
+<div class="row exp"><label><input id="reduceBlur" type="checkbox"> Reduce backdrop blur<small>Experimental · synthetic layout regression observed</small></label></div>
+<div class="row exp"><label><input id="instantScroll" type="checkbox"> Prefer instant scroll<small>Experimental · synthetic layout regression observed</small></label></div>
+<div class="row exp"><label><input id="reduceMotion" type="checkbox"> Reduce animation / transitions<small>Experimental</small></label></div>
+<div class="row exp"><label><input id="offscreenMessages" type="checkbox" disabled> Skip offscreen message layout/paint<small>Research-only · streaming regression observed</small></label></div>
 </div>
 <div id="findings"></div>
-<details><summary>Terms, explained gently</summary>
-<div class="d"><b>TTFB-like proxy</b><span>TTFB means “Time To First Byte.” CATFOOD Atom currently measures from request start until response headers arrive, so it is deliberately labeled TTFB-like rather than exact browser Navigation Timing TTFB. Smaller usually means less waiting before a response begins.</span></div>
-<div class="d"><b>API request burst</b><span>A cluster of requests starting close together. Atom reports the busiest one-second window in the latest 60 seconds.</span></div>
-<div class="d"><b>Interaction latency</b><span>The time associated with a click, key, pointer, or input interaction. High values are the “I pressed it, why did nothing happen?” feeling.</span></div>
-<div class="d"><b>Max frame gap / jank</b><span>Browsers normally update the screen repeatedly. A long gap means the screen paused. “Jank” is the common performance term for visible stutter or sluggishness.</span></div>
-<div class="d"><b>DOM mutations</b><span>DOM means Document Object Model: the browser's in-memory tree for the page. A mutation is a structural change to that tree. Many mutations are not automatically bad, but they can represent extra browser work.</span></div>
-<div class="d"><b>HTTP 429</b><span>The standard HTTP status “Too Many Requests.” It means the service refused that request under its current rate/admission limits.</span></div>
-<div class="d"><b>Long Task</b><span>A browser main-thread task lasting at least 50 ms. While the main thread is busy, input and rendering may have to wait.</span></div>
-</details>
-<p class="note">Latest 60 seconds. Metrics stay local. Conversation content is not collected.</p>
+<p class="note" id="transport">Delivery: checking…</p>
+<p class="note">Observer measures. Boost changes presentation work only. This prototype does not alter request scheduling, authentication, or rate limits. Conversation content is not collected.</p>
 </div><script src="popup.js"></script></body></html>

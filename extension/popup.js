@@ -1,20 +1,18 @@
-const D="http://127.0.0.1:8766",$=x=>document.getElementById(x);
-const FINDINGS={
-  rate_limit:["HTTP 429 — rate-limit errors","ChatGPT refused one or more requests under the current request/admission limit."],
-  request_burst:["API request burst","Many API requests started close together."],
-  ui_update_volume:["DOM mutation volume","The page made many structural updates."],
-  main_thread_load:["Long Task / main-thread load","Long-running browser work kept the main UI thread busy."],
-  frame_stalls:["Frame stalls / jank","The screen had an unusually long pause between visual updates."],
-  interaction_latency:["Interaction latency","A click, key, pointer, or input interaction took unusually long."],
-  layout_instability:["Layout shift","Page content moved without a recent user interaction."]
-};
+const D="http://127.0.0.1:8767",$=x=>document.getElementById(x);
+const CLIENT_Q=`client=${encodeURIComponent(chrome.runtime.id)}`;
+const DEFAULTS={enabled:false,reduceMotion:false,reduceBlur:false,instantScroll:false,offscreenMessages:false};
+const SETTINGS=Object.keys(DEFAULTS);
+const FINDINGS={rate_limit:["HTTP 429 / rate limiting","Boost will not try to bypass or manipulate this limit."],request_burst:["API request burst","Many API requests started close together; request scheduling remains observation-only."],server_wait_tail:["Server-wait dominated API tail","Slow successful GETs are waiting before response headers; Boost does not change request scheduling."],main_thread_load:["Foreground main-thread load","Browser work occupied the visible page main UI thread."],background_main_thread_load:["Background tab load","Hidden ChatGPT tabs consumed main-thread time; this is separated from foreground responsiveness."],frame_stalls:["Frame stalls / jank","The screen paused between updates."],interaction_latency:["Interaction latency","An input interaction took unusually long."],layout_instability:["Layout shift","Page content moved without recent input."]};
 $("openAnalysis").addEventListener("click",()=>chrome.tabs.create({url:chrome.runtime.getURL("analysis.html")}));
-async function go(){try{const s=await(await fetch(D+"/snapshot",{cache:"no-store"})).json();
-$("ttfb").textContent=Math.round(s.network.avg_ttfb_ms)+" ms";
-$("burst").textContent=s.network.max_api_requests_1s+" /s";
-$("input").textContent=Math.round(s.interaction.max_duration_ms)+" ms";
-$("gap").textContent=Math.round(s.render.max_gap_ms)+" ms";
-$("mut").textContent=s.render.mutations;
-$("r429").textContent=s.network.status_counts["429"]||0;
-const b=$("findings");b.innerHTML="";
-for(const f of s.findings){const [title,explain]=FINDINGS[f.id]||[f.id,"Performance finding."];const d=document.createElement("div");d.className="f";const t=document.createElement("div");t.className="ft";t.textContent=title;const x=document.createElement("div");x.className="fd";x.textContent=explain+" "+f.detail;d.append(t,x);b.appendChild(d)}}catch(_){}}go();setInterval(go,1000);
+chrome.storage.local.get(DEFAULTS).then(v=>{v.offscreenMessages=false;for(const k of SETTINGS)$(k).checked=!!v[k]});
+for(const k of SETTINGS)$(k).addEventListener("change",e=>chrome.storage.local.set({[k]:e.target.checked}));
+chrome.storage.onChanged.addListener((changes,area)=>{if(area!=="local")return;for(const k of SETTINGS)if(changes[k])$(k).checked=!!changes[k].newValue});
+const OUTBOX_KEY="catfoodTransportOutboxV1",STATE_KEY="catfoodTransportStateV1";
+let pollBusy=false,pollFailures=0,pollTimer=null;
+function schedule(ms){if(pollTimer!=null)clearTimeout(pollTimer);pollTimer=setTimeout(()=>{pollTimer=null;void go()},ms)}
+async function fetchJson(url,timeout=900){const c=new AbortController(),t=setTimeout(()=>c.abort(),timeout);try{const r=await fetch(url,{cache:"no-store",signal:c.signal});if(!r.ok)throw new Error("http_"+r.status);return await r.json()}finally{clearTimeout(t)}}
+async function deliveryText(){try{const v=await chrome.storage.session.get([OUTBOX_KEY,STATE_KEY]),st=v[STATE_KEY]||{},box=v[OUTBOX_KEY],now=Date.now();if((st.circuit_until||0)>now)return `Delivery: circuit open · pending ${box?.events?.length||0} · failures ${st.failures||0} · dropped ${st.dropped||0}`;if(box)return `Delivery: awaiting ACK · batch ${box.events?.length||0} · failures ${st.failures||0}`;if(st.last_ack_ts)return `Delivery: ACK ${Math.max(0,Math.round((now-st.last_ack_ts)/1000))}s ago · dropped ${st.dropped||0}`;return 'Delivery: no ACK observed yet'}catch(_){return 'Delivery: state unavailable'}}
+async function go(){if(pollBusy)return;pollBusy=true;try{const [s,dt]=await Promise.all([fetchJson(D+"/snapshot?"+CLIENT_Q),deliveryText()]);if(s.version!==chrome.runtime.getManifest().version)throw new Error("daemon_version_mismatch");pollFailures=0;
+$("transport").textContent=dt;$("ttfb").textContent=Math.round((s.network.api_median_ttfb_ms??s.network.avg_ttfb_ms))+" ms";$("input").textContent=Math.round(s.interaction.max_duration_ms)+" ms";$("gap").textContent=Math.round((s.render.max_stall_ms??s.render.max_gap_ms))+" ms";$("r429").textContent=s.network.status_counts["429"]||0;
+const b=$("findings");b.innerHTML="";for(const f of s.findings.slice(0,3)){const [title,explain]=FINDINGS[f.id]||[f.id,"Performance finding."];const d=document.createElement("div");d.className="f";const t=document.createElement("div");t.className="ft";t.textContent=title;const x=document.createElement("div");x.className="fd";x.textContent=explain+" "+f.detail;d.append(t,x);b.appendChild(d)}}catch(_){pollFailures++;$("transport").textContent=`Local service unavailable · retry backoff ${Math.min(8,2**Math.min(pollFailures,3))}s`}finally{pollBusy=false;schedule(pollFailures?Math.min(8000,1000*(2**Math.min(pollFailures,3))):1000)}}
+void go();

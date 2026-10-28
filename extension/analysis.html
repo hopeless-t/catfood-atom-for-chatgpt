@@ -1,26 +1,35 @@
 <!doctype html>
-<html><head><meta charset="utf-8"><title>CATFOOD Atom Analysis</title><link rel="stylesheet" href="analysis.css"></head>
+<html><head><meta charset="utf-8"><title>CATFOOD Atom + Boost Analysis</title><link rel="stylesheet" href="analysis.css"></head>
 <body><main>
-<header><div><h1>CATFOOD Atom for ChatGPT</h1><p>Live local performance analysis for ChatGPT Web.</p></div><div id="health" class="health">Connecting…</div></header>
-<section class="diagnosis"><div class="eyebrow">What is slowing ChatGPT right now?</div><h2 id="headline">Collecting data…</h2><p id="headlineExplain">Use ChatGPT normally for a few seconds. This page updates automatically.</p></section>
-<section><h2>Live metrics <span>latest 60 seconds</span></h2><div class="cards">
-<article><strong id="ttfb">–</strong><h3>TTFB-like proxy</h3><p><b>Plain meaning:</b> server response wait. Time from request start until response headers arrive.</p></article>
-<article><strong id="burst">–</strong><h3>API request burst</h3><p><b>Plain meaning:</b> API requests arriving together. Busiest one-second start window.</p></article>
-<article><strong id="input">–</strong><h3>Interaction latency</h3><p><b>Plain meaning:</b> click / typing delay. Slowest observed interaction.</p></article>
-<article><strong id="gap">–</strong><h3>Max frame gap</h3><p><b>Plain meaning:</b> screen stutter. Longest pause between visual frames.</p></article>
-<article><strong id="mut">–</strong><h3>DOM mutations</h3><p><b>Plain meaning:</b> page update work. Structural changes in the browser page tree.</p></article>
-<article><strong id="long">–</strong><h3>Long Task time</h3><p><b>Plain meaning:</b> time the browser's main UI thread was tied up by long work.</p></article>
-<article><strong id="jank">–</strong><h3>Jank frames</h3><p><b>Plain meaning:</b> visual updates with unusually long gaps.</p></article>
-<article><strong id="r429">–</strong><h3>HTTP 429</h3><p><b>Plain meaning:</b> rate-limit errors. Requests the service refused under current limits.</p></article>
+<header><div><h1>CATFOOD Atom + Boost for ChatGPT</h1><p>Measure → improve → measure again, locally.</p></div><div id="health" class="health">Connecting…</div></header>
+<section class="diagnosis"><div class="eyebrow">What is slowing ChatGPT right now?</div><h2 id="headline">Collecting data…</h2><p id="headlineExplain">Use ChatGPT normally for a few seconds. This page updates automatically.</p><div id="recommendation" class="recommendation"></div></section>
+<section class="boostpanel"><div><h2>Boost controls</h2><p>Boost is OFF by default. Experimental controls remain opt-in until they win real ChatGPT A/B validation.</p></div><div class="toggles">
+<label><input id="enabled" type="checkbox"><span><b>Boost enabled</b><small>Master switch</small></span></label>
+<label class="experimental"><input id="reduceBlur" type="checkbox"><span><b>Reduce backdrop blur</b><small>Experimental · synthetic layout regression observed</small></span></label>
+<label class="experimental"><input id="instantScroll" type="checkbox"><span><b>Prefer instant scroll</b><small>Experimental · synthetic layout regression observed</small></span></label>
+<label class="experimental"><input id="reduceMotion" type="checkbox"><span><b>Reduce animation / transitions</b><small>Experimental</small></span></label>
+<label class="experimental"><input id="offscreenMessages" type="checkbox" disabled><span><b>Skip offscreen message layout/paint</b><small>Research-only · streaming regression observed</small></span></label>
+</div><p class="boundary">Network requests, authentication, response semantics, and rate-limit behavior are not modified by this prototype.</p></section>
+<section><div class="sectionhead"><h2>Live metrics <span>latest 60 seconds</span></h2><div><button id="captureBaseline">Capture baseline</button><button id="clearBaseline" class="secondary">Clear baseline</button></div></div><div id="baselineNote" class="baselineNote">No baseline captured. For a useful A/B check, repeat a similar workload before and after changing one Boost control.</div><div class="cards">
+<article><strong id="ttfb">–</strong><h3>Median API TTFB</h3><p><b>Plain meaning:</b> typical API response wait; long-held requests no longer dominate the headline.</p><div class="delta" id="d_ttfb"></div></article>
+<article><strong id="burst">–</strong><h3>API request burst</h3><p><b>Plain meaning:</b> API requests starting together.</p><div class="delta" id="d_burst"></div></article>
+<article><strong id="input">–</strong><h3>Interaction latency</h3><p><b>Plain meaning:</b> click / typing delay.</p><div class="delta" id="d_input"></div></article>
+<article><strong id="gap">–</strong><h3>Max frame gap / LoAF duration</h3><p><b>Plain meaning:</b> longest visual stall.</p><div class="delta" id="d_gap"></div></article>
+<article><strong id="layoutTail">–</strong><h3>Style/layout tail</h3><p><b>Plain meaning:</b> time spent in late-frame style and layout work reported by native LoAF.</p><div class="delta" id="d_layoutTail"></div></article>
+<article><strong id="long">–</strong><h3>Main-thread pressure</h3><p><b>Plain meaning:</b> main UI thread tied up.</p><div class="delta" id="d_long"></div></article>
+<article><strong id="loaf">–</strong><h3>Long Animation Frame (LoAF)</h3><p id="loafAttr"><b>Plain meaning:</b> prolonged visual-frame work, with local attribution.</p></article>
+<article><strong id="jank">–</strong><h3>Jank frames</h3><p><b>Plain meaning:</b> visual update stalls.</p><div class="delta" id="d_jank"></div></article>
+<article><strong id="r429">–</strong><h3>HTTP 429</h3><p><b>Plain meaning:</b> rate-limit errors.</p><div class="delta" id="d_429"></div></article>
 </div></section>
 <section><h2>Findings</h2><div id="findings" class="findings"><p>No current warning.</p></div></section>
-<section><h2>Recent event timeline <span>last 100 local events</span></h2><p class="help">Technical event names are kept intact; the explanation column tells you what each one means. No conversation text, request bodies, cookies, authorization headers, raw URLs, or query strings are shown.</p><div class="tablewrap"><table><thead><tr><th>Time</th><th>Technical event</th><th>Plain meaning</th><th>Observed value</th></tr></thead><tbody id="events"></tbody></table></div></section>
+<section><h2>Recent event timeline <span>last 100 local events</span></h2><p class="help">Technical event names stay intact; the next column explains them. No conversation text, request bodies, cookies, authorization headers, raw URLs, or query strings are shown.</p><div class="tablewrap"><table><thead><tr><th>Time</th><th>Technical event</th><th>Plain meaning</th><th>Observed value</th></tr></thead><tbody id="events"></tbody></table></div></section>
 <section class="glossary"><h2>Glossary</h2>
-<details><summary>TTFB / TTFB-like proxy</summary><p><b>TTFB</b> is Time To First Byte, a standard web-performance term. Atom currently observes request start → response headers, so its card intentionally says <b>TTFB-like proxy</b> rather than claiming an exact Navigation Timing TTFB measurement.</p></details>
-<details><summary>DOM</summary><p><b>DOM</b> is Document Object Model: the browser's in-memory tree representing a web page. A DOM mutation is a structural change to that tree.</p></details>
-<details><summary>Long Task</summary><p>A main-thread task lasting at least 50 ms. Long Tasks can delay input, scrolling, and rendering because much browser UI work shares that main thread.</p></details>
-<details><summary>Frame gap / jank</summary><p>A frame gap is time between visual updates. <b>Jank</b> is the common performance term for visible stutter or sluggishness.</p></details>
-<details><summary>HTTP 429</summary><p>The standard HTTP status <b>Too Many Requests</b>. It means the service refused a request under its current rate/admission limits.</p></details>
+<details><summary>TTFB / TTFB-like proxy</summary><p><b>TTFB</b> is Time To First Byte. Atom currently observes request start → response headers, so it deliberately says <b>TTFB-like proxy</b> rather than claiming exact Navigation Timing TTFB.</p></details>
+<details><summary>Style/layout tail</summary><p><b>Style/layout tail</b> is the late-frame style and geometry work exposed by Long Animation Frame timing. It is a direct browser timing signal and does not require a continuous DOM mutation observer.</p></details>
+<details><summary>Main-thread pressure</summary><p>Uses LoAF blocking time on modern browsers and Long Task time as a fallback. Input and rendering may wait while the main UI thread is occupied.</p></details>
+<details><summary>Long Animation Frame (LoAF)</summary><p>A browser frame that took unusually long. Atom stores only numeric attribution buckets — ChatGPT scripts, extension scripts, other scripts, and unattributed time — never script URLs.</p></details>
+<details><summary>Frame gap / jank</summary><p>A frame gap is time between visual updates. <b>Jank</b> is visible stutter or sluggishness.</p></details>
+<details><summary>HTTP 429</summary><p>The standard HTTP status <b>Too Many Requests</b>. Atom observes it; Boost does not attempt to bypass it.</p></details>
 </section>
-<footer>All analysis is local. CATFOOD Atom is an observer; this release does not alter ChatGPT requests.</footer>
+<footer>All analysis and Boost settings are local. Compare similar workloads before drawing conclusions from baseline deltas.</footer>
 </main><script src="analysis.js"></script></body></html>
