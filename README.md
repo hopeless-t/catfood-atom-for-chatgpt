@@ -1,12 +1,14 @@
 # CATFOOD Atom + Boost for ChatGPT
 
-**Current release: v0.5.57**
+**Current release: v0.5.58**
 
 ChatGPT Web が重いときに、**何が起きているのかをローカルで観測して、実際に効く改善だけを残す**ための小さなツールです。
 
 CATFOOD Atom は性能信号を観測・分析します。CATFOOD Boost は、実測で有効性を確認できた改善だけを慎重に使います。
 
-**v0.5.57:** analysis/long-poll client が先に接続を閉じた場合に、daemon が不要な BrokenPipe / ConnectionReset traceback を表示しないよう修正しました。
+**v0.5.58:** 長い実会話で adaptive motion が約2秒周期の main-thread stall を自己励起するケースを確認し、自動適用を退役しました。
+
+**v0.5.58:** analysis/long-poll client が先に接続を閉じた場合に、daemon が不要な BrokenPipe / ConnectionReset traceback を表示しないよう修正しました。
 
 [English](#english)
 
@@ -38,9 +40,9 @@ CATFOOD Atom は性能信号を観測・分析します。CATFOOD Boost は、�
 - Force instant scroll: OFF
 - Offscreen message culling: RETIRED
 - Manual reduce motion: OFF
-- Adaptive motion pressure response: ENABLED
+- Automatic adaptive motion pressure response: RETIRED in v0.5.58 after a live long-conversation regression
 
-Adaptive motion は、重い描画フレームが実際に観測されたときだけ一時的に animation / transition を抑制し、その後自動的に通常表示へ戻ります。
+Automatic adaptive motion は、長い実会話で feedback oscillation を起こすケースが見つかったため v0.5.58 で退役しました。手動の reduce motion は引き続き利用できますが、初期状態は OFF です。
 
 ### 実測例
 
@@ -48,7 +50,7 @@ Adaptive motion は、重い描画フレームが実際に観測されたとき�
 
 - real ChatGPT の matched A/B 5組で reduce-motion candidate は median FCP 約 **9.8%改善**、median Load 約 **6.1%改善**
 - mutation-heavy synthetic workload では MutationObserver callback work を約 **29%削減**
-- v0.5.57 の live readback では duplicate telemetry batches **0**
+- v0.5.58 の live readback では duplicate telemetry batches **0**
 
 効果がほぼ無かった instant scroll や、悪化した offscreen message culling などは採用していません。
 
@@ -123,7 +125,7 @@ Manual Boost controls are **OFF by default**.
 
 CATFOOD does not enable an optimization just because it sounds faster. Ideas that fail measurement are left disabled or retired.
 
-When severe visual-frame pressure is actually observed, the adaptive motion response may reduce animations/transitions temporarily and restores them automatically afterward.
+Automatic adaptive motion was retired in v0.5.58 after a long live conversation exposed a feedback oscillation. Manual reduce motion remains available and OFF by default.
 
 ### Observed results
 
@@ -131,7 +133,7 @@ Development measurements, not guarantees for every machine or session:
 
 - Five matched real-ChatGPT A/B pairs for the reduce-motion candidate showed about **9.8% better median FCP** and **6.1% better median Load**.
 - A mutation-heavy synthetic workload showed about **29% less MutationObserver callback work** after simplifying the observer path.
-- The live v0.5.57 readback showed **0 duplicate telemetry batches**.
+- The live v0.5.58 readback showed **0 duplicate telemetry batches**.
 
 ### Design principle
 

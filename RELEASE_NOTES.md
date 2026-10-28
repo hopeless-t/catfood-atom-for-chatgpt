@@ -1,6 +1,7 @@
-# v0.5.57
+# v0.5.58
 
-- Fixes noisy `BrokenPipeError` / `ConnectionResetError` tracebacks when an analysis or long-poll client closes its local connection before the daemon writes the response.
-- Client cancellation is treated as normal transport cancellation; unrelated exceptions are still allowed to surface.
-- Reproduced with eight forced early-disconnect probes after the fix: no traceback, daemon remained active.
-- Includes the current privacy-preserving server-wait-tail diagnostic and the existing conservative Boost defaults.
+- Retires automatic adaptive-motion style toggling after a long live conversation exposed a feedback oscillator.
+- Before the fix, repeated visible LoAFs formed an approximately two-second cadence, including 200–400+ ms stalls.
+- After retirement, the same live conversation produced a fresh 12-second observation with 0 visible LoAF events; the following rolling snapshot reported LoAF=0, main-thread pressure=0, interaction warnings=0, and no findings.
+- Manual reduce motion remains available and OFF by default.
+- Includes the v0.5.57 client-cancellation traceback fix.

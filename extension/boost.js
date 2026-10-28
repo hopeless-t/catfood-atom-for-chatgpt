@@ -54,7 +54,10 @@
     if (adaptiveMotionTimer !== null) clearTimeout(adaptiveMotionTimer);
     adaptiveMotionTimer = setTimeout(adaptiveMotionOff, ADAPTIVE_MOTION_HOLD_MS);
   }
-  document.addEventListener("catfood:adaptive-motion-pressure", adaptiveMotionOn);
+  // Retired from automatic runtime use after a long-conversation live world
+  // exposed a feedback oscillator: LoAF -> temporary global style -> restore -> LoAF.
+  // Manual reduceMotion remains available through the ordinary Boost setting.
+  adaptiveMotionOff();
 
   function cssFor(cfg) {
     const rules = [];

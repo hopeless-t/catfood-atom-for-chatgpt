@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "CATFOOD Atom + Boost for ChatGPT",
-  "version": "0.5.57",
+  "version": "0.5.58",
   "description": "Local ChatGPT Web performance observer with optional presentation-safe boost controls.",
   "permissions": [
     "webRequest",
