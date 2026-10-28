@@ -7,7 +7,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 import urllib.request, urllib.error
 
-VERSION = "0.5.58"
+VERSION = "0.5.59"
 MAX_EVENTS = 5000
 MAX_BODY = 64 * 1024
 SURFACE_LOCK = threading.Lock()
@@ -229,7 +229,7 @@ class Store:
             kept = [e for e in self.events if e.get("client_id") != client_id]
             self.events.clear(); self.events.extend(kept)
 
-    def snapshot(self, client_id=None, events_override=None):
+    def snapshot(self, client_id=None, events_override=None, tab_id=None):
         now = time.time() * 1000
         if events_override is None:
             with self.lock: events = list(self.events)
@@ -237,6 +237,8 @@ class Store:
                 events = [e for e in events if e.get("client_id") == client_id]
         else:
             events = list(events_override)
+        if tab_id is not None:
+            events = [e for e in events if int(e.get("tab_id", -1) or -1) == int(tab_id)]
         recent = [e for e in events if now - e.get("ts", now) <= 60_000]
         net = [e for e in recent if e.get("kind") == "net"]
         starts = [e for e in net if e.get("stage") == "start"]
@@ -349,7 +351,7 @@ class Store:
         if shift > 0.25: findings.append({"severity":"medium","id":"layout_instability","detail":f"layout shift score {round(shift,3)}"})
 
         return {
-            "version": VERSION, "window_ms": 60_000, "events_total": len(events), "scope_client": client_id,
+            "version": VERSION, "window_ms": 60_000, "events_total": len(events), "scope_client": client_id, "scope_tab_id": tab_id,
             "network": {"issued":len(issued)+resource_count, "completed":len(completed)+resource_count, "max_active":max_active,
                         "avg_ttfb_ms":round(ttfb_sum/ttfb_count,2) if ttfb_count else 0,
                         "api_median_ttfb_ms":round(api_ttfb_median,2), "api_avg_ttfb_ms":round(api_ttfb_avg,2),
@@ -374,11 +376,13 @@ class Store:
             "privacy": "No conversation text, request bodies, response bodies, cookies, auth headers, raw URLs, or query strings are stored."
         }
 
-    def view(self, client_id=None, limit=100):
+    def view(self, client_id=None, limit=100, tab_id=None):
         with self.lock: events = list(self.events)
         if client_id:
             events = [e for e in events if e.get("client_id") == client_id]
-        return {"snapshot": self.snapshot(client_id, events_override=events), "events": events[-limit:], "scope_client": client_id}
+        if tab_id is not None:
+            events = [e for e in events if int(e.get("tab_id", -1) or -1) == int(tab_id)]
+        return {"snapshot": self.snapshot(client_id, events_override=events, tab_id=tab_id), "events": events[-limit:], "scope_client": client_id, "scope_tab_id": tab_id}
 
 STORE = Store()
 
@@ -434,11 +438,22 @@ def delivery_health():
     with BATCH_RECEIPT_LOCK:
         return {"accepted_batches":BATCH_ACCEPTED_TOTAL,"duplicate_batches":BATCH_DUPLICATE_TOTAL,"last_batch_id":LAST_BATCH_ID,"last_batch_at":LAST_BATCH_AT,"dedupe_window":BATCH_RECEIPTS.maxlen,"client_window":DELIVERY_CLIENT_MAX,"clients":[dict(v) for v in DELIVERY_CLIENTS.values()]}
 
+def active_surface_tab_id(client):
+    if not client: return None
+    sv = surface_view(client).get("surface")
+    if not isinstance(sv, dict): return None
+    try:
+        tab_id = int(sv.get("tab_id", -1))
+    except Exception:
+        return None
+    return tab_id if tab_id >= 0 else None
+
 def world_view(client):
     sv = surface_view(client)
+    tab_id = active_surface_tab_id(client)
     return {"ok":True,"version":VERSION,"pid":os.getpid(),"event_log":{"enabled":PERSIST_EVENTS,"max_bytes":LOG_MAX_BYTES},
-            "delivery":delivery_health(),"snapshot":STORE.snapshot(client),"surface":sv.get("surface"),
-            "scope_client":client,"change_seq":client_change_seq(client)}
+            "delivery":delivery_health(),"snapshot":STORE.snapshot(client, tab_id=tab_id),"surface":sv.get("surface"),
+            "scope_client":client,"scope_tab_id":tab_id,"change_seq":client_change_seq(client)}
 
 class Handler(BaseHTTPRequestHandler):
     server_version = "catfood-atom/" + VERSION
@@ -474,11 +489,11 @@ class Handler(BaseHTTPRequestHandler):
             except Exception: return self._json(400, {"ok":False,"error":"bad_wait_query"})
             seq, changed = wait_client_change(client, after, timeout_ms/1000.0)
             return self._json(200, {"ok":True,"version":VERSION,"scope_client":client,"change_seq":seq,"changed":changed})
-        if p.path == "/snapshot": return self._json(200, STORE.snapshot(client))
+        if p.path == "/snapshot": return self._json(200, STORE.snapshot(client, tab_id=active_surface_tab_id(client)))
         if p.path == "/surface": return self._json(200, surface_view(client))
         if p.path == "/view":
             limit = min(500, max(1, int(q.get("limit", [100])[0])))
-            return self._json(200, STORE.view(client, limit))
+            return self._json(200, STORE.view(client, limit, tab_id=active_surface_tab_id(client)))
         if p.path == "/events":
             limit = min(500, max(1, int(q.get("limit", [100])[0])))
             with STORE.lock: items = list(STORE.events)

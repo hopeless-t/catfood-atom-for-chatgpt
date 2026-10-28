@@ -1,7 +1,8 @@
-# v0.5.58
+# v0.5.59
 
-- Retires automatic adaptive-motion style toggling after a long live conversation exposed a feedback oscillator.
-- Before the fix, repeated visible LoAFs formed an approximately two-second cadence, including 200–400+ ms stalls.
-- After retirement, the same live conversation produced a fresh 12-second observation with 0 visible LoAF events; the following rolling snapshot reported LoAF=0, main-thread pressure=0, interaction warnings=0, and no findings.
-- Manual reduce motion remains available and OFF by default.
-- Includes the v0.5.57 client-cancellation traceback fix.
+- Fixes cross-tab diagnostic contamination in multi-window Chrome sessions.
+- Popup/analysis snapshots now scope to the current sanitized active-surface tab when available instead of aggregating every ChatGPT tab sharing the extension client ID.
+- Keeps client-only fallback behavior for legacy/no-surface clients.
+- A two-tab failure-world test proves a severe tab and a quiet tab remain isolated.
+- Live readback in a three-window session: another active ChatGPT tab remained open in a second window while the current scoped tab reported no findings, no LoAF pressure, and no interaction warning.
+- Includes the v0.5.58 adaptive-motion retirement and v0.5.57 client-cancellation traceback fix.
